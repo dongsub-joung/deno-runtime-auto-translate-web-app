@@ -1,0 +1,185 @@
+To create a simple WebAssembly (WASM) project using Rust that makes a POST API request, you can use `wasm-bindgen` for interacting with JavaScript and the `web-sys` crate to perform the HTTP request in the browser.
+
+Here's an example of how to set up a Rust project with WebAssembly that makes a POST request to an API.
+
+### Step-by-Step Guide
+
+#### 1. Setup the Rust Project for WASM
+
+First, you'll need to install the required tools if you haven't already:
+- Rust toolchain with the `wasm32-unknown-unknown` target.
+- `wasm-pack` for bundling the WASM package.
+
+If you don't have them, you can install them like so:
+
+```sh
+# Install Rust and the wasm32 target
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup target add wasm32-unknown-unknown
+
+# Install wasm-pack
+cargo install wasm-pack
+```
+
+#### 2. Create a New Rust Project
+
+Create a new Rust project:
+
+```sh
+cargo new wasm_post_request --lib
+cd wasm_post_request
+```
+
+#### 3. Update `Cargo.toml`
+
+You need to add some dependencies to `Cargo.toml` for WASM and HTTP functionality.
+
+```toml
+[package]
+name = "wasm_post_request"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["window", "console", "fetch"] }
+js-sys = "0.3"
+
+[lib]
+crate-type = ["cdylib"]
+```
+
+- `wasm-bindgen`: Helps to bind Rust code to JavaScript.
+- `web-sys`: Provides access to browser APIs like `fetch` (for HTTP requests).
+- `js-sys`: Provides access to JavaScript standard objects like `console`.
+
+#### 4. Implement the Rust Code to Make a POST Request
+
+In the `src/lib.rs` file, use `web-sys` to make the POST request.
+
+```rust
+use wasm_bindgen::prelude::*;
+use web_sys::{Request, RequestInit, RequestMode, Response, Headers};
+use js_sys::Promise;
+use wasm_bindgen_futures::JsFuture;
+
+#[wasm_bindgen]
+pub async fn make_post_request() -> Result<(), JsValue> {
+    // URL to make the request to
+    let url = "https://jsonplaceholder.typicode.com/posts";
+
+    // Create the request body as JSON
+    let post_data = r#"
+        {
+            "title": "foo",
+            "body": "bar",
+            "userId": 1
+        }
+    "#;
+
+    // Initialize request options
+    let mut opts = RequestInit::new();
+    opts.method("POST");
+    opts.mode(RequestMode::Cors);
+    opts.body(Some(&js_sys::JsString::from(post_data).into()));
+
+    // Create the request and set headers
+    let request = Request::new_with_str_and_init(url, &opts)?;
+    let headers = request.headers();
+    headers.set("Content-Type", "application/json")?;
+
+    // Fetch the request and await the response
+    let window = web_sys::window().ok_or("no global window object")?;
+    let fetch_promise = window.fetch_with_request(&request);
+
+    // Convert the promise to a Rust Future
+    let response: Response = JsFuture::from(fetch_promise).await?.dyn_into()?;
+    
+    // Check if the response status is OK
+    if response.ok() {
+        web_sys::console::log_1(&"POST request was successful!".into());
+    } else {
+        web_sys::console::log_1(&"POST request failed.".into());
+    }
+
+    Ok(())
+}
+```
+
+This code does the following:
+1. Creates a `POST` request with JSON data.
+2. Uses the `fetch` API to send the request to a server (in this case, `https://jsonplaceholder.typicode.com/posts`).
+3. Logs a success or failure message depending on the response.
+
+#### 5. Use `wasm-bindgen` to Bind the Rust Function to JavaScript
+
+You will need to build the WASM and create JavaScript glue code to interact with the Rust function.
+
+Run the following command to build the WASM project:
+
+```sh
+wasm-pack build --target web
+```
+
+This generates the WASM binary and a JavaScript wrapper in the `pkg` directory.
+
+#### 6. Create an HTML File to Use the WASM Module
+
+Create an `index.html` file to load and use the WASM module:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM POST Request</title>
+</head>
+<body>
+    <h1>WASM POST Request Example</h1>
+    <button id="make-request-btn">Make POST Request</button>
+    <script type="module">
+        import init, { make_post_request } from './pkg/wasm_post_request.js';
+
+        async function run() {
+            await init();  // Initialize the WASM module
+
+            document.getElementById("make-request-btn").addEventListener("click", async () => {
+                try {
+                    await make_post_request();
+                    console.log("POST request sent successfully!");
+                } catch (e) {
+                    console.error("Error sending POST request:", e);
+                }
+            });
+        }
+
+        run();
+    </script>
+</body>
+</html>
+```
+
+- The button in this HTML file triggers the `make_post_request` function when clicked.
+
+#### 7. Serve the Application
+
+Now, you need to serve the files to see it in action. You can use any static file server, but `python`'s built-in HTTP server or a tool like `http-server` works well for this.
+
+Using Python (in the project directory):
+
+```sh
+python3 -m http.server
+```
+
+Or, with `http-server` (you may need to install it globally with `npm install -g http-server`):
+
+```sh
+http-server .
+```
+
+Visit `http://localhost:8000` in your browser, and you should see the button. Clicking it will trigger the POST request.
+
+### Final Thoughts
+
+This example demonstrates how to use Rust and WASM to send a POST request from a web page. This method uses the native `fetch` API, which is available in the browser. You can easily modify the code to handle different API endpoints, authentication, and error handling as needed.
