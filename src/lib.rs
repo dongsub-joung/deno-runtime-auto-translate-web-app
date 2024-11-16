@@ -4,6 +4,7 @@ use js_sys::Promise;
 use wasm_bindgen_futures::JsFuture;
 
 // wasm-pack build --target web
+// https://stackoverflow.com/questions/77402053/can-tokioruntime-be-used-in-wasm
 #[wasm_bindgen]
 pub async fn make_post_request(post_data: &str) -> Result<(), JsValue> {
     // URL to make the request to
