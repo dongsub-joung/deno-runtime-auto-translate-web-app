@@ -3,6 +3,10 @@ use web_sys::{Request, RequestInit, RequestMode, Response, Headers};
 use js_sys::Promise;
 use wasm_bindgen_futures::JsFuture;
 
+use serde::{Serialize};
+use serde_json::{Value, to_value};
+
+
 // wasm-pack build --target web
 // https://stackoverflow.com/questions/77402053/can-tokioruntime-be-used-in-wasm
 #[wasm_bindgen]
@@ -39,4 +43,14 @@ pub async fn make_post_request(post_data: &str) -> Result<(), JsValue> {
     }
 
     Ok(())
+}
+
+#[derive(Serialize)]
+struct MyData{
+    text: String
+}
+
+fn struct_to_json(text_data: &MyData) -> Result<Value, serde_json::Error> {
+    // Serialize the struct into a serde_json::Value
+    to_value(person)
 }
