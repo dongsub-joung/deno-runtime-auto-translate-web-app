@@ -1,5 +1,7 @@
 use wasm_bindgen::prelude::*;
-use web_sys::{Request, RequestInit, RequestMode, Response, Headers};
+use web_sys::{Request, RequestInit, RequestMode, Response, Headers, Fetch};
+// the package `deno-runtime-auto-translate-web-app` depends on `web-sys`, with features: `Fetch` but `web-sys` does not have these features.
+
 use js_sys::Promise;
 use wasm_bindgen_futures::JsFuture;
 
